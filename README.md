@@ -9,6 +9,7 @@
 - http://altibase.com/services/support/
 - http://altibase.com/case-studies/
 - http://altibase.com/faqs/product/
+- http://support.altibase.com (Korean materials)
 
 ### Q&A and Bug Reports
 - Q&A and bug reports regarding Altibase should be submitted at http://support.altibase.com
@@ -20,7 +21,7 @@
 - License information can be found in the COPYING files.
 - Altibase includes GPC sources, so, if you want to use those sources for commertial use then you need to buy "General Polygon Clipper (GPC) License".
 
-### Build environment setting steps
+### Build and Run
 <pre><code>
 - OS: Red Hat or Ubuntu
 - CPU: x86_64
@@ -57,8 +58,6 @@
   # core filename pattern (core.execution_file_name.time)
   kernel.core_uses_pid = 0
   kernel.core_pattern = core.%e.%t
-- glibc 2.12 ~ 2.20
-- gcc 4.6.3
 - Install following libraries  (optional)
   https://gmplib.org/ 
   http://www.mpfr.org/
@@ -80,58 +79,69 @@
   --with-mpc=/usr/mpc \
   --with-libelf=/usr/elf \
   make; make install
+- glibc 2.12 ~ 2.27 (ldd --version) (If system doesn't have right one, change OS version itself)
+- gcc 4.6.3 ~ 7.3.0 (gcc --version)
+  If your gcc version is under 7.x then revert this repostory commits on Oct 16, 2018 with comment "changes for using gcc-7, g++-7"
 - Install both of Oracle Java JDK 1.5 and 1.7
-- Install https://www.openssl.org/source/openssl-1.0.2o.tar.gz 
-- Install development tools 
-  autoconf
-  autopoint
-  help2man
-  texinfo
-  g++
-  gawk
-  flex (2.5.35 version)
-  bison (2.4.1 version)
-  libncurses5-dev
-  binutils-dev
-  ddd
-  tkdiff
-  manpages-dev 
-  libldap2-dev
-- Modify /usr/include/sys/select.h
-  $ diff select.h_old select.h_new
-  62a63,67
+  Go to https://www.oracle.com/technetwork/java/archive-139210.html
+  JDK 1.5 : jdk-1_5_0_22-linux-amd64-rpm.bin or jdk-1_5_0_22-linux-amd64.bin
+  JDK 1.7 : jdk-7u80-linux-x64.rpm or jdk-7u80-linux-x64.tar.gz
+- Install OpenSSL
+  Remove existing openssl (Ubuntu 18.04 example)
+    sudo mv /usr/include/openssl /usr/include/openssl.original
+    sudo mv /usr/include/x86_64-linux-gnu/openssl /usr/include/x86_64-linux-gnu/openssl.original
+  Download : https://www.openssl.org/source/openssl-1.0.2o.tar.gz
+  Make a symbolic link : sudo ln -s /usr/local/ssl/include/openssl /usr/include/openssl
+- Install development tools
+  sudo apt install autoconf autopoint help2man texinfo g++ gawk flex bison
+  flex (2.5.35 version) (https://github.com/westes/flex/releases) (install method: https://github.com/westes/flex)
+  bison (2.4.1 version) (http://ftp.gnu.org/gnu/bison/)
+  sudo apt install libncurses5-dev binutils-dev ddd tkdiff manpages-dev libldap2-dev
+- Modify /usr/include/sys/select.h (Ubuntu: /usr/include/x86_64-linux-gnu/sys/select.h)
+  Following diff command's resulting line numbers can be different by various platforms and versions. So, search using keywords and approximate positions. 
+  Following diff is executed on the Ubuntu 18.04.
+  /usr/include/x86_64-linux-gnu/sys$ diff select.h.original select.h
+  57a58,62
   > /* Maximum number of file descriptors in `fd_set'. */
   > #ifndef FD_SETSIZE
   > #define FD_SETSIZE __FD_SETSIZE
   > #endif
   > 
-  69c74
+  64c69
   <     __fd_mask fds_bits[__FD_SETSIZE / __NFDBITS];
   ---
   >     __fd_mask fds_bits[FD_SETSIZE / __NFDBITS];
-  72c77
+  67c72
   <     __fd_mask __fds_bits[__FD_SETSIZE / __NFDBITS];
   ---
   >     __fd_mask __fds_bits[FD_SETSIZE / __NFDBITS];
-- re2c 
-  /home/user/local/pkg$ tar xvf ./re2c-0.13.5.tar.gz
-  /home/user/local/pkg$ cd ./re2c-0.13.5
-  /home/user/local/pkg/re2c-0.13.5$ ./configure
-  /home/user/local/pkg/re2c-0.13.5$ make
-  /home/user/local/pkg/re2c-0.13.5$ make install
+
+- re2c (re2c-0.13.5.tar.gz) (http://re2c.org/install/install.html)
 - Other environment variable setting
-  export ALTIDEV_HOME=*source code directory*
+  export LANG=en_US.UTF-8
+  export ALTIDEV_HOME=/path/to/source_code_directory
   export ALTIBASE_DEV=${ALTIDEV_HOME}
   export ALTIBASE_HOME=${ALTIDEV_HOME}/altibase_home
-  export ALTIBASE_NLS_USE=US7ASCII
+  export ALTIBASE_NLS_USE=UTF8
   export ALTIBASE_PORT_NO=17730
-  export ADAPTER_JAVA_HOME=/usr/java/jdk1.7.0_71
-  export JAVA_HOME=/usr/java/jdk1.5.0_22
+  export ADAPTER_JAVA_HOME=/path/to/jdk1.7
+  export JAVA_HOME=/path/to/jdk1.5
   export PATH=.:${ALTIBASE_HOME}/bin:${JAVA_HOME}/bin:${PATH}
   export CLASSPATH=.:${JAVA_HOME}/lib:${JAVA_HOME}/jre/lib:${ALTIBASE_HOME}/lib/Altibase.jar:${CLASSPATH}
   export LD_LIBRARY_PATH=$ADAPTER_JAVA_HOME/jre/lib/amd64/server:${ALTIBASE_HOME}/lib:${LD_LIBRARY_PATH}
-- Compile Altibase
-  ./configure --with-build_mode=release
+
+- Build Altibase
+  ./configure --with-build_mode=release ## default build mode is debug mode
   make clean
   make build
+
+- Prepare Altibase configuration file
+  cp $ALTIBASE_HOME/conf/altibase.properties.release $ALTIBASE_HOME/conf/altibase.properties 
+- Create Altibase database files
+  $ALTIBASE_HOME/bin/server create UTF8 UTF8
+- Start Altibase server deamon
+  $ALTIBASE_HOME/bin/server start
+- Connect Altibase server using iSQL and retrieve all table list
+  $ALTIBASE_HOME/bin/is
+  iSQL> select * from tab;
 </code></pre>
